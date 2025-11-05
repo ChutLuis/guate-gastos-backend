@@ -13,6 +13,9 @@ export class ExpensesService {
         ...createExpenseDto,
         userId,
       },
+      include: {
+        linkedTransaction: true,
+      },
     });
   }
 
@@ -22,8 +25,11 @@ export class ExpensesService {
         userId,
         deletedAt: null,
       },
+      include: {
+        linkedTransaction: true,
+      },
       orderBy: {
-        createdAt: 'desc',
+        dueDay: 'asc',
       },
     });
   }
@@ -34,6 +40,9 @@ export class ExpensesService {
         id,
         userId,
         deletedAt: null,
+      },
+      include: {
+        linkedTransaction: true,
       },
     });
 
@@ -54,6 +63,9 @@ export class ExpensesService {
         syncVersion: {
           increment: 1,
         },
+      },
+      include: {
+        linkedTransaction: true,
       },
     });
   }

@@ -1,6 +1,23 @@
-import { IsString, IsNotEmpty, IsNumber, IsBoolean, IsOptional, IsDateString, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  IsDateString,
+  IsInt,
+  IsUUID,
+  IsIn,
+  MaxLength,
+  Min,
+  Max
+} from 'class-validator';
 
 export class CreateExpenseDto {
+  // ============================================
+  // REQUIRED FIELDS
+  // ============================================
+
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -10,20 +27,40 @@ export class CreateExpenseDto {
   amount: number;
 
   @IsString()
-  @IsOptional()
-  category?: string;
+  @IsNotEmpty()
+  @IsIn(['housing', 'utilities', 'transportation', 'food', 'entertainment', 'healthcare', 'debt', 'savings', 'other'])
+  category: string = 'other';
+
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  dueDay: number = 15;
 
   @IsBoolean()
+  isPaidThisMonth: boolean = false;
+
+  @IsBoolean()
+  isRecurring: boolean = true;
+
+  // ============================================
+  // OPTIONAL FIELDS
+  // ============================================
+
+  @IsString()
   @IsOptional()
-  paidThisMonth?: boolean;
+  @MaxLength(10)
+  icon?: string;
 
   @IsDateString()
   @IsOptional()
   lastPaymentDate?: string;
 
-  @IsInt()
-  @Min(1)
-  @Max(31)
+  @IsUUID()
   @IsOptional()
-  dueDay?: number;
+  linkedTransactionId?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(1000)
+  notes?: string;
 }
