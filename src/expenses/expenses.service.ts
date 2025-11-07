@@ -8,6 +8,26 @@ export class ExpensesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, createExpenseDto: CreateExpenseDto) {
+    // Check for duplicate expense before creating
+    const existingExpense = await this.prisma.expense.findFirst({
+      where: {
+        userId,
+        name: createExpenseDto.name,
+        amount: createExpenseDto.amount,
+        category: createExpenseDto.category,
+        deletedAt: null,
+      },
+      include: {
+        linkedTransaction: true,
+      },
+    });
+
+    if (existingExpense) {
+      console.log(`⚠️ Duplicate expense detected, returning existing: ${existingExpense.id}`);
+      return existingExpense;
+    }
+
+    // No duplicate found, proceed with creating new expense
     return this.prisma.expense.create({
       data: {
         ...createExpenseDto,
