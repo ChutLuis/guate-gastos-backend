@@ -18,7 +18,7 @@ export class ExpensesService {
         deletedAt: null,
       },
       include: {
-        linkedTransaction: true,
+        transactions: true,
       },
     });
 
@@ -34,7 +34,7 @@ export class ExpensesService {
         userId,
       },
       include: {
-        linkedTransaction: true,
+        transactions: true,
       },
     });
   }
@@ -46,7 +46,7 @@ export class ExpensesService {
         deletedAt: null,
       },
       include: {
-        linkedTransaction: true,
+        transactions: true,
       },
       orderBy: {
         dueDay: 'asc',
@@ -62,7 +62,7 @@ export class ExpensesService {
         deletedAt: null,
       },
       include: {
-        linkedTransaction: true,
+        transactions: true,
       },
     });
 
@@ -85,7 +85,7 @@ export class ExpensesService {
         },
       },
       include: {
-        linkedTransaction: true,
+        transactions: true,
       },
     });
   }
