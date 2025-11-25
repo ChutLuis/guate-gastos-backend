@@ -25,8 +25,7 @@ model User {
   timezone   String    @default("America/Guatemala")
 
   // Relationships
-  salaries         Salary[]
-  expenses         Expense[]
+  recurrenceRules  RecurrenceRule[]
   creditCards      CreditCard[]
   transactions     Transaction[]
   installments     Installment[]
@@ -44,73 +43,47 @@ model User {
 }
 
 // ============================================
-// INCOME SOURCES
+// RECURRENCE RULES (Unified Ledger)
 // ============================================
 
-model Salary {
-  id            String     @id @default(uuid()) @db.Uuid
-  userId        String     @map("user_id") @db.Uuid
-  name          String
-  amount        Decimal    @db.Decimal(12, 2)
-  type          SalaryType
-  firstPayment  Decimal?   @map("first_payment") @db.Decimal(12, 2)
-  secondPayment Decimal?   @map("second_payment") @db.Decimal(12, 2)
+model RecurrenceRule {
+  id       String  @id @default(uuid()) @db.Uuid
+  userId   String  @map("user_id") @db.Uuid
+  type     String  // 'income' | 'expense'
+  name     String
+  amount   Decimal @db.Decimal(12, 2)
+  category String
 
-  // ✅ NEW - Auto-generation configuration
-  autoGenerateTransactions Boolean   @default(true) @map("auto_generate_transactions")
-  categoryId               String?   @map("category_id")
-  lastGeneratedDate        DateTime? @map("last_generated_date") @db.Date
-  nextGenerationDate       DateTime? @map("next_generation_date") @db.Date
+  // Recurrence Configuration
+  frequency  String @map("frequency") // 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
+  dayOfMonth Int?   @map("day_of_month") // For monthly: 1-31
+  dayOfWeek  Int?   @map("day_of_week") // For weekly: 0-6 (Sunday-Saturday)
+  interval   Int    @default(1) // Every N periods
 
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
-  syncVersion Int       @default(1) @map("sync_version")
+  // Generation Control
+  autoGenerate   Boolean   @default(true) @map("auto_generate")
+  lastGenerated  DateTime? @map("last_generated")
+  nextGeneration DateTime? @map("next_generation")
+  endDate        DateTime? @map("end_date")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isActive Boolean @default(true) @map("is_active")
 
-  @@index([userId])
-  @@index([userId, deletedAt])
-  @@map("salaries")
-}
-
-enum SalaryType {
-  monthly
-  biweekly
-}
-
-// ============================================
-// EXPENSES
-// ============================================
-
-model Expense {
-  id          String  @id @default(uuid()) @db.Uuid
-  userId      String  @map("user_id") @db.Uuid
-  name        String
-  amount      Decimal @db.Decimal(12, 2)
-  category    String  @default("other")
-  icon        String?
-  dueDay      Int     @default(15) @map("due_day")
-  isRecurring Boolean @default(true) @map("is_recurring")
-
-  // ✅ NEW - Auto-generation configuration
-  autoGenerateReminders Boolean @default(true) @map("auto_generate_reminders")
-
+  // Metadata
   notes       String?   @db.Text
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
   syncVersion Int       @default(1) @map("sync_version")
 
+  // Relations
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[] @relation("TransactionToExpense")
+  transactions Transaction[] @relation("RecurrenceRuleTransactions")
 
   @@index([userId])
   @@index([userId, deletedAt])
-  @@index([dueDay])
-  @@index([category])
-  @@index([isRecurring])
-  @@map("expenses")
+  @@index([userId, isActive])
+  @@index([nextGeneration])
+  @@map("recurrence_rules")
 }
 
 // ============================================
@@ -155,21 +128,27 @@ model Transaction {
   category    String?
   relatedId   String?         @map("related_id") @db.Uuid
 
-  // ✅ NEW - Transaction Type Details
+  // ✅ NEW - Transaction Status (Unified Ledger)
+  status String @default("completed") @map("status") // 'pending' | 'completed' | 'cancelled'
+
+  // ✅ NEW - Recurrence Link (Unified Ledger)
+  recurrenceRuleId     String? @map("recurrence_rule_id") @db.Uuid
+  relatedTransactionId String? @map("related_transaction_id") @db.Uuid
+
+  // Transaction Type Details
   subtype TransactionSubtype? @map("transaction_subtype")
 
-  // ✅ NEW - Income Specific
+  // Income Specific
   incomeSource     IncomeSource? @map("income_source")
   isRecurring      Boolean?      @default(false) @map("is_recurring")
   recurrenceConfig Json?         @map("recurrence_config")
 
-  // ✅ EXISTING - Expense Specific
-  paymentMethod    PaymentMethod? @map("payment_method")
-  cardId           String?        @map("card_id") @db.Uuid
-  isFixedExpense   Boolean?       @default(false) @map("is_fixed_expense")
-  relatedExpenseId String?        @map("related_expense_id") @db.Uuid
+  // Expense Specific
+  paymentMethod  PaymentMethod? @map("payment_method")
+  cardId         String?        @map("card_id") @db.Uuid
+  isFixedExpense Boolean?       @default(false) @map("is_fixed_expense")
 
-  // ✅ NEW - Metadata
+  // Metadata
   tags String[] @default([])
 
   notes       String?   @db.Text
@@ -178,10 +157,13 @@ model Transaction {
   deletedAt   DateTime? @map("deleted_at")
   syncVersion Int       @default(1) @map("sync_version")
 
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  card           CreditCard? @relation(fields: [cardId], references: [id], onDelete: SetNull)
-  relatedExpense Expense?    @relation("TransactionToExpense", fields: [relatedExpenseId], references: [id], onDelete: SetNull)
-  receipts       Receipt[]
+  // Relations
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card            CreditCard?     @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  recurrenceRule  RecurrenceRule? @relation("RecurrenceRuleTransactions", fields: [recurrenceRuleId], references: [id], onDelete: SetNull)
+  relatedTransaction Transaction? @relation("PartialPayments", fields: [relatedTransactionId], references: [id], onDelete: SetNull)
+  partialPayments    Transaction[] @relation("PartialPayments")
+  receipts        Receipt[]
 
   @@index([userId])
   @@index([userId, deletedAt])
@@ -191,6 +173,9 @@ model Transaction {
   @@index([subtype])
   @@index([isRecurring])
   @@index([incomeSource])
+  @@index([status])
+  @@index([recurrenceRuleId])
+  @@index([userId, status])
   @@map("transactions")
 }
 
