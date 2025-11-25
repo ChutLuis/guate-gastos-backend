@@ -14,6 +14,7 @@ import { BudgetsModule } from './budgets/budgets.module';
 import { PaymentRemindersModule } from './payment-reminders/payment-reminders.module';
 import { MonthlySnapshotsModule } from './monthly-snapshots/monthly-snapshots.module';
 import { RecurrenceRulesModule } from './recurrence-rules/recurrence-rules.module';
+import { InstallmentsModule } from './installments/installments.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { RecurrenceRulesModule } from './recurrence-rules/recurrence-rules.modul
     PaymentRemindersModule,
     MonthlySnapshotsModule,
     RecurrenceRulesModule,
+    InstallmentsModule,
   ],
   controllers: [AppController],
   providers: [
