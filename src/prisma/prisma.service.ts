@@ -36,6 +36,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
 
     // Delete records in correct order (due to foreign key constraints)
+    // Note: expense and salary tables removed in unified ledger migration
     await this.$transaction([
       this.receipt.deleteMany(),
       this.syncLog.deleteMany(),
@@ -48,9 +49,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       this.remittance.deleteMany(),
       this.installment.deleteMany(),
       this.transaction.deleteMany(),
+      this.recurrenceRule.deleteMany(),
       this.creditCard.deleteMany(),
-      this.expense.deleteMany(),
-      this.salary.deleteMany(),
       this.user.deleteMany(),
     ]);
   }
